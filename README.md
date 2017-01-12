@@ -13,7 +13,7 @@ Installing
 
 You can install it simply running these commands on your puppetmaster::
 
-   $ wget --no-check-certificate -O /usr/local/sbin/puppetlast https://github.com/algodelinux/puppetlast/raw/master/puppetlast 
+   $ wget --no-check-certificate -O /usr/local/sbin/puppetlast https://github.com/algodelinux/puppetlast/raw/master/puppetlast  
    $ chmod 755 /usr/local/sbin/puppetlast 
 
 
