@@ -1,0 +1,76 @@
+#!/bin/bash
+# ------------------------------------------------------------
+# script:  puppetlast
+# Author:  Esteban M. Navas Martín
+# Date:    11-01-2017
+# Ver:     12-01-2017
+#
+# Purpose: This program shows the last connect time of puppet nodes. 
+# It currently displays them in green if they've connected in seconds or minutes.
+# It currently displays them in red if they've connected in hours or days.
+#
+# Copyright (c) 2012-2017 Esteban M. Navas Martín <algodelinux@gmail.com>. All rights reserved.
+
+#   This program is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#   You should have received a copy of the GNU General Public License
+#   along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+function displaytime {
+
+  GREEN='\033[0;92m'
+  RED='\033[0;91m'
+  BIRED='\033[1;91m'
+  NC='\033[0m'
+
+  local T=$1
+  local D=$((T/60/60/24))
+  local H=$((T/60/60%24))
+  local M=$((T/60%60))
+  local S=$((T%60))
+
+  if [ $D -gt 0 ]; then
+     printf "${BIRED} %5s days ago: " $D
+  elif [ $H -gt 0 ]; then
+     printf "${RED} %5s hours ago: " $H
+  elif [ $M -gt 0 ]; then
+     printf "${GREEN} %5s minutes ago: " $M
+  elif [ $S -gt 0 ]; then
+     printf "${GREEN} %5s seconds ago: " $S
+  fi
+  printf '%s ' $3
+  printf "(%s)\n" $2
+}
+
+:> /tmp/puppetlast.tmp
+
+for fichero in $(ls /var/lib/puppet/yaml/facts/*); do
+   # Calculamos la diferencia
+   antsyslog=$(stat -c %Y  /var/log/syslog)
+   antfichero=$(stat -c %Y $fichero)
+   diferencia=$((antsyslog-antfichero))
+   hostname=$(sed -n 's|fqdn:\(.*\)|\1|p' $fichero | sed -e 's/^[ \t]*//')
+   echo "$diferencia:$hostname:$fichero" >> /tmp/puppetlast.tmp
+done
+
+sort -k1n -o /tmp/puppetlast.tmp /tmp/puppetlast.tmp
+
+OLDIFS=$IFS
+IFS=:
+while read tiempo hostname fichero
+do
+   basenamefichero=$(basename $fichero)
+   uuid=$(echo "${basenamefichero%.*}")
+   displaytime $tiempo $hostname $uuid
+done < /tmp/puppetlast.tmp
+printf '\n'
+IFS=$OLDIFS
+
+
