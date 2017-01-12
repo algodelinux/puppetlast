@@ -4,9 +4,9 @@ puppetlast
 Overview
 --------
 
-This program shows the last connect time of puppet nodes. 
-It currently displays them in green if they've connected in seconds or minutes.
-It currently displays them in red if they've connected in hours or days.
+This program shows the last connect time of puppet nodes.  
+It currently displays them in green if they've connected in seconds or minutes.  
+It currently displays them in red if they've connected in hours or days.  
 
 Installing
 ----------
