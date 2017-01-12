@@ -1,8 +1,6 @@
 puppetlast
 ==========
 
-.. contents::
-
 Overview
 --------
 
