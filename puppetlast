@@ -3,14 +3,34 @@
 # script:  puppetlast
 # Author:  Esteban M. Navas Martín
 # Date:    11-01-2017
-# Ver:     12-01-2017
+# Ver:     17-01-2017
 #
-# Purpose: This program shows the last connect time of puppet nodes. 
+# Purpose: This program shows the last connect time of puppet nodes.
 # It currently displays them in green if they've connected in seconds or minutes.
 # It currently displays them in red if they've connected in hours or days.
 #
 # Copyright (c) 2012-2017 Esteban M. Navas Martín <algodelinux@gmail.com>. All rights reserved.
-
+#
+# Syntax: puppetlast [-m|--min time] [-M|--max time]
+#
+# Options:
+# -m|--min: let specify min display time
+# -M|--max: let specify max display time
+#
+# time is a combination of number+letter where:
+# letter must be: [dhms]
+# d: days
+# h: hours
+# m: minutes
+# s: seconds
+#
+# Examples:
+#    puppetlast
+#    puppetlast -m 1h
+#    puppetlast -M 2d
+#    puppetlast -M 1h -m 2d
+#    puppetlast -M 19h -m 1m
+#
 #   This program is free software; you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation; either version 2 of the License, or
@@ -49,9 +69,61 @@ function displaytime {
   printf "(%s)\n" $2
 }
 
+function calculatetime {
+
+  local ARGUMENTO=$1
+  local NUMERO=${ARGUMENTO%%[dhms]}
+  local LETRA=${ARGUMENTO:${#NUMERO}}
+  local VALOR=$1
+
+  if [ $LETRA = "d" ]; then
+     VALOR=$((NUMERO*60*60*24))
+  elif [ $LETRA = "h" ]; then
+     VALOR=$((NUMERO*60*60))
+  elif [ $LETRA = "m" ]; then
+     VALOR=$((NUMERO*60))
+  elif [ $LETRA = "s" ]; then
+     VALOR=$((NUMERO))
+  fi
+  echo $VALOR
+}
+
+# read the options
+TEMP=`getopt -o m:M: --long min:,max: -n "$0" -- "$@"`
+eval set -- "$TEMP"
+
+# extract options and their arguments into variables.
+while true; do
+   case "$1" in
+       -m|--min)
+            case "$2" in
+                "") shift 2 ;;
+                *) if [[ "$2" =~ [0-9]+[dhms] ]]; then
+                      MIN=$(calculatetime $2)
+		   fi
+		   shift 2 ;;
+            esac ;;
+        -M|--max)
+            case "$2" in
+                "") shift 2 ;;
+                *) if [[ "$2" =~ [0-9]+[dhms] ]]; then
+		      MAX=$(calculatetime $2)
+		   fi
+		   shift 2 ;;
+            esac ;;
+        --) shift ; break ;;
+        *) break ;;
+    esac
+done
+
+if [ $MIN ] && [ $MAX ] && [ $MIN -gt $MAX ]; then
+   echo "El valor mínimo debe ser menor que el valor máximo."
+   exit 1;
+fi
+
 :> /tmp/puppetlast.tmp
 
-for fichero in $(ls /var/lib/puppet/yaml/facts/*); do
+for fichero in $(ls /var/lib/puppet/yaml/facts/* 2>/dev/null); do
    # Calculamos la diferencia
    antsyslog=$(stat -c %Y  /var/log/syslog)
    antfichero=$(stat -c %Y $fichero)
@@ -61,6 +133,10 @@ for fichero in $(ls /var/lib/puppet/yaml/facts/*); do
 done
 
 sort -k1n -o /tmp/puppetlast.tmp /tmp/puppetlast.tmp
+
+[ -n "$MIN" ] && gawk -v minimo="$MIN" -i inplace -F":" '$1>=minimo' /tmp/puppetlast.tmp
+[ -n "$MAX" ] && gawk -v maximo="$MAX" -i inplace -F":" '$1<=maximo' /tmp/puppetlast.tmp
+
 
 OLDIFS=$IFS
 IFS=:
@@ -72,5 +148,3 @@ do
 done < /tmp/puppetlast.tmp
 printf '\n'
 IFS=$OLDIFS
-
-
