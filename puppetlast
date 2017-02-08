@@ -3,7 +3,8 @@
 # script:  puppetlast
 # Author:  Esteban M. Navas Martín
 # Date:    11-01-2017
-# Ver:     17-01-2017
+# Ver:     08-02-2017
+# Require: gawk
 #
 # Purpose: This program shows the last connect time of puppet nodes.
 # It currently displays them in green if they've connected in seconds or minutes.
@@ -120,6 +121,9 @@ if [ $MIN ] && [ $MAX ] && [ $MIN -gt $MAX ]; then
    echo "El valor mínimo debe ser menor que el valor máximo."
    exit 1;
 fi
+
+# Instalamos gawk si no se encuentra instalado
+dpkg -l|grep 'ii  gawk' 2>&1>/dev/null || apt-get -y install gawk
 
 :> /tmp/puppetlast.tmp
 
