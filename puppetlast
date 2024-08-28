@@ -3,14 +3,14 @@
 # script:  puppetlast
 # Author:  Esteban M. Navas Martín
 # Date:    11-01-2017
-# Ver:     08-02-2017
+# Ver:     12-08-2024
 # Require: gawk
 #
 # Purpose: This program shows the last connect time of puppet nodes.
 # It currently displays them in green if they've connected in seconds or minutes.
 # It currently displays them in red if they've connected in hours or days.
 #
-# Copyright (c) 2012-2017 Esteban M. Navas Martín <algodelinux@gmail.com>. All rights reserved.
+# Copyright (c) 2012-2024 Esteban M. Navas Martín <algodelinux@gmail.com>. All rights reserved.
 #
 # Syntax: puppetlast [-m|--min time] [-M|--max time]
 #
@@ -101,16 +101,16 @@ while true; do
                 "") shift 2 ;;
                 *) if [[ "$2" =~ [0-9]+[dhms] ]]; then
                       MIN=$(calculatetime $2)
-		   fi
-		   shift 2 ;;
+                   fi
+                   shift 2 ;;
             esac ;;
         -M|--max)
             case "$2" in
                 "") shift 2 ;;
                 *) if [[ "$2" =~ [0-9]+[dhms] ]]; then
-		      MAX=$(calculatetime $2)
-		   fi
-		   shift 2 ;;
+                      MAX=$(calculatetime $2)
+                   fi
+                   shift 2 ;;
             esac ;;
         --) shift ; break ;;
         *) break ;;
@@ -123,16 +123,19 @@ if [ $MIN ] && [ $MAX ] && [ $MIN -gt $MAX ]; then
 fi
 
 # Instalamos gawk si no se encuentra instalado
-dpkg -l|grep 'ii  gawk' 2>&1>/dev/null || apt-get -y install gawk
+dpkg -l|grep 'ii  gawk' 2>&1>/dev/null || apt-get -y install gawk jq
 
 :> /tmp/puppetlast.tmp
 
-for fichero in $(ls /var/lib/puppet/yaml/facts/* 2>/dev/null); do
+antsyslog=$(stat -c %Y /var/log/syslog)
+
+facts_dir="$(find /var/lib/puppetserver -path '*/server_data/facts')"
+
+for fichero in $(ls $facts_dir/* 2>/dev/null); do
    # Calculamos la diferencia
-   antsyslog=$(stat -c %Y  /var/log/syslog)
    antfichero=$(stat -c %Y $fichero)
-   diferencia=$((antsyslog-antfichero))
-   hostname=$(sed -n 's|fqdn:\(.*\)|\1|p' $fichero | sed -e 's/^[ \t]*//')
+   diferencia=$(( antsyslog - antfichero ))
+   hostname=$(jq .values.fqdn $fichero | tr -d '"')
    echo "$diferencia:$hostname:$fichero" >> /tmp/puppetlast.tmp
 done
 
@@ -150,5 +153,5 @@ do
    uuid=$(echo "${basenamefichero%.*}")
    displaytime $tiempo $hostname $uuid
 done < /tmp/puppetlast.tmp
-printf '\n'
+printf "${NC}"'\n'
 IFS=$OLDIFS
